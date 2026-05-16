@@ -1,0 +1,11 @@
+name,description,price,quantity,category,AssetTag,reorderLevel,LastRestockDate,PurchaseOrderID,ApprovalStatus,UsageFrequency,Notes
+Office Desk,Standard wooden office desk,150.00,0,Furniture,TAG-101,10,2025-01-15,PO-1001,Unapproved,High,Out of stock - no reorder point
+Dell Monitor,24-inch 1080p Dell Monitor,120.00,5,Electronics,TAG-102,5,2025-01-10,PO-1002,Pending,Low,Missing quantity and date fixed
+Printer A4 Paper,Box of 500 A4 printer paper sheets,25.00,10000,Office Supplies,TAG-103,100,2024-11-10,PO-1003,Approved,Low,Overstocked
+Ergonomic Keyboard,Wireless ergonomic keyboard,45.00,5,Electronics,TAG-104,10,2025-01-15,PO-1006,Approved,Low,Missing description fixed
+Ergonomic Chair,Mesh back ergonomic office chair,200.00,0,Furniture,TAG-105,5,2025-02-20,PO-1004,Delayed,High,Out of stock
+Conference Table,Large 8-person conference table,500.00,1,Furniture,TAG-105,1,2025-02-21,PO-1004,Duplicated,Medium,Duplicated tag and PO
+Whiteboard Markers,Set of 4 dry erase markers,5.00,500,Office Supplies,TAG-106,50,2023-05-03,PO-1005,Approved,None,Missing tag fixed; dead stock
+Wireless Mouse,Bluetooth wireless mouse,20.00,0,Electronics,TAG-107,15,2024-12-01,PO-1008,Unapproved,High,Missing PO details fixed
+Sticky Notes,Pack of 100 yellow sticky notes,2.00,8000,Office Supplies,TAG-108,200,2024-08-11,PO-1007,Approved,Low,Overstocked
+Old Fax Machine,Obsolete fax and copy machine,50.00,3,Electronics,TAG-109,1,2019-05-22,PO-0050,Approved,None,Missing tag fixed; dead stock
