@@ -1,13 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import { Plus, Edit2, Trash2, X, Search, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Search, AlertTriangle, CheckCircle, Grid, List } from 'lucide-react';
 
 const API = 'http://localhost:5000/api';
-
 const CATEGORIES = ['General', 'Electronics', 'Clothing', 'Food & Beverage', 'Furniture', 'Tools', 'Office Supplies', 'Health', 'Sports', 'Other'];
 const STATUSES = ['active', 'inactive', 'discontinued'];
-
 const emptyForm = { name: '', price: '', quantity: '', description: '', category: 'General', sku: '', reorderLevel: '10', supplier: '', status: 'active' };
 
 export default function Products() {
@@ -22,6 +20,9 @@ export default function Products() {
   const [form, setForm] = useState({ ...emptyForm });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  
+  // Custom View Mode State: 'table' or 'grid'
+  const [viewMode, setViewMode] = useState('grid');
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -38,7 +39,6 @@ export default function Products() {
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
-  // Validation
   const validateForm = () => {
     const e = {};
     if (!form.name.trim()) e.name = 'Name is required';
@@ -103,20 +103,38 @@ export default function Products() {
     if (errors[name]) setErrors(er => ({ ...er, [name]: undefined }));
   };
 
+  // Determine low stock items
+  const lowStockItems = products.filter(p => p.quantity <= (p.reorderLevel || 10) && p.quantity > 0);
+
   return (
     <>
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div><h1>Products</h1><p>Manage your product inventory — {pagination.total || 0} items</p></div>
+        <div>
+          <h1>Product Registry</h1>
+          <p>Index & filter catalog stocks — {pagination.total || 0} registered products</p>
+        </div>
         <button className="btn btn-primary" onClick={() => openModal()}><Plus size={16} /> Add Product</button>
       </div>
 
       <div className="page-body">
-        <div className="toolbar">
-          <div className="search-bar">
-            <Search size={16} />
-            <input placeholder="Search by name, SKU, or description..." value={search} onChange={e => setSearch(e.target.value)} />
+        {/* Low Stock Warning Strip Ticker */}
+        {lowStockItems.length > 0 && (
+          <div className="stock-level-warning-ticker">
+            <AlertTriangle size={18} />
+            <span>
+              <strong>STOCK WARNING:</strong> {lowStockItems.length} product(s) are currently running below safety reorder thresholds! Please issue procurement.
+            </span>
           </div>
-          <div className="toolbar-right">
+        )}
+
+        {/* Toolbar with Grid/List Toggles */}
+        <div className="toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+          <div className="search-bar" style={{ flex: 1, minWidth: '240px' }}>
+            <Search size={16} />
+            <input placeholder="Search by name, SKU, or supplier..." value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+          
+          <div className="toolbar-right" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <select value={filterCat} onChange={e => setFilterCat(e.target.value)} style={{ padding: '7px 32px 7px 10px', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontSize: '0.82rem', background: '#fff' }}>
               <option value="all">All Categories</option>
               {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
@@ -125,11 +143,84 @@ export default function Products() {
               <option value="all">All Status</option>
               {STATUSES.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
             </select>
+
+            {/* Grid/Table View toggler */}
+            <div className="view-toggle-bar">
+              <button className={`view-toggle-btn ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => setViewMode('grid')} title="Grid View">
+                <Grid size={14} /> Grid
+              </button>
+              <button className={`view-toggle-btn ${viewMode === 'table' ? 'active' : ''}`} onClick={() => setViewMode('table')} title="List View">
+                <List size={14} /> List
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="card">
-          {loading ? <div className="loading-center"><div className="spinner" /></div> : (
+        {loading ? (
+          <div className="loading-center"><div className="spinner" /></div>
+        ) : products.length === 0 ? (
+          <div className="card" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+            <h3>No products found</h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 4 }}>Refine your active search or filters.</p>
+          </div>
+        ) : viewMode === 'grid' ? (
+          /* Render grid view */
+          <div className="products-grid-layout">
+            {products.map(p => {
+              const isOut = p.quantity === 0;
+              const isLow = p.quantity <= (p.reorderLevel || 10) && p.quantity > 0;
+              const stockRatio = Math.min((p.quantity / ((p.reorderLevel || 10) * 2)) * 100, 100);
+              const fillHex = isOut ? 'var(--danger)' : isLow ? 'var(--warning)' : 'var(--success)';
+
+              return (
+                <div className="product-grid-card" key={p._id} style={{ borderTop: `4px solid ${fillHex}` }}>
+                  <span className={`badge ${p.status === 'active' ? 'badge-success' : p.status === 'discontinued' ? 'badge-danger' : 'badge-warning'} product-card-badge`}>
+                    {p.status}
+                  </span>
+                  
+                  <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 600, color: 'var(--primary)' }}>
+                    {p.category}
+                  </span>
+                  
+                  <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-main)', marginTop: 6, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={p.name}>
+                    {p.name}
+                  </h3>
+                  <span className="product-card-sku">SKU: {p.sku || 'N/A'}</span>
+                  
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 8, height: '36px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                    {p.description}
+                  </p>
+
+                  <div className="product-card-price">${Number(p.price).toFixed(2)}</div>
+                  
+                  {/* Safety Stock Level Bar */}
+                  <div className="stock-indicator-panel">
+                    <div className="stock-level-stats">
+                      <span>Stock: <strong>{p.quantity} units</strong></span>
+                      <span>Min: {p.reorderLevel || 10}</span>
+                    </div>
+                    <div className="stock-progress-bar">
+                      <div className="stock-progress-fill" style={{ width: `${stockRatio}%`, background: fillHex }} />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Vendor: {p.supplier || 'Unassigned'}</span>
+                      {isOut ? <span style={{ color: 'var(--danger)', fontSize: '0.72rem', fontWeight: 600 }}>OUT OF STOCK</span>
+                        : isLow ? <span style={{ color: 'var(--warning)', fontSize: '0.72rem', fontWeight: 600 }}>LOW STOCK</span>
+                        : <span style={{ color: 'var(--success)', fontSize: '0.72rem', fontWeight: 600 }}>ADEQUATE ✓</span>}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6, marginTop: 'auto', paddingTop: '10px' }}>
+                    <button className="btn btn-sm btn-icon" onClick={() => openModal(p)} title="Edit"><Edit2 size={14} /> Edit</button>
+                    <button className="btn btn-sm btn-icon danger" onClick={() => handleDelete(p._id, p.name)} title="Delete"><Trash2 size={14} /></button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          /* Render list view table */
+          <div className="card">
             <div className="table-container">
               <table>
                 <thead>
@@ -148,7 +239,7 @@ export default function Products() {
                       <td><span className={`badge ${p.status === 'active' ? 'badge-success' : p.status === 'discontinued' ? 'badge-danger' : 'badge-warning'}`}>{p.status}</span></td>
                       <td>
                         {p.quantity === 0 ? <span className="badge badge-danger">Out of stock</span>
-                          : p.isLowStock ? <span className="badge badge-warning"><AlertTriangle size={12} style={{ marginRight: 3 }} />Low</span>
+                          : p.quantity <= (p.reorderLevel || 10) ? <span className="badge badge-warning"><AlertTriangle size={12} style={{ marginRight: 3 }} />Low</span>
                           : <span className="badge badge-success"><CheckCircle size={12} style={{ marginRight: 3 }} />OK</span>}
                       </td>
                       <td style={{ textAlign: 'right' }}>
@@ -157,14 +248,11 @@ export default function Products() {
                       </td>
                     </tr>
                   ))}
-                  {products.length === 0 && (
-                    <tr><td colSpan={8} className="empty-state">No products found</td></tr>
-                  )}
                 </tbody>
               </table>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {modal && (
